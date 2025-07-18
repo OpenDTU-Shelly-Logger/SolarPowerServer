@@ -1,17 +1,16 @@
 import os
 import requests
-import time
 from logger import SimpleLogger
-from main import Result
+from result_enum import Result
 
 SHELLY_PATH = "http://192.168.5.187/status"
 SERVER_PATH = "https://power.frozenassassine.de/data"
 NO_DATA_WAIT_SECOND = 60
 REQUESTS_EVERY_SECOND = 10
-REQUEST_TIMEOUT = 2000
+REQUEST_TIMEOUT = 2
 
 
-class PowerData:
+class ShellyPowerData:
     def __init__(self, logger: SimpleLogger):
         self.logger = logger
 
