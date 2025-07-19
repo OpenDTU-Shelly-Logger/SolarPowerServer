@@ -10,7 +10,7 @@ logger = SimpleLogger()
 live_solar_uploader = SolarLiveData(logger)
 power_data = ShellyPowerData(logger)
 history_solar_manager = HistoryData(logger)
-power_solar_usage = PowerSolarUsage()
+power_solar_usage = PowerSolarUsage(logger)
 
 current_solar = 0
 current_power = 0
@@ -21,7 +21,7 @@ while True:
 
     shelly_data, shelly_result = power_data.get_shelly_data()
     if shelly_result == Result.SUCCESS:
-        # power_data.post_shelly_data(shelly_data)
+        power_data.post_shelly_data(shelly_data)
         current_power = shelly_data["total_power"]
 
     # solar history data:
@@ -29,24 +29,24 @@ while True:
         power_solar_usage.new_day()
 
     # send solar only at day
-    if currenthour <= 21 or currenthour >= 5:
-
+    if currenthour <= 22 and currenthour >= 5:
         live_solar_result, live_solar_data = live_solar_uploader.get_live_data()
         if live_solar_result == Result.SUCCESS:
-            # live_solar_uploader.uploadToServer(live_solar_data)
+            live_solar_uploader.uploadToServer(live_solar_data)
             current_solar = live_solar_data["inverters"][0]["AC"]["0"]["Power DC"]["v"]
 
             if history_solar_manager.make_data(live_solar_data) == Result.SUCCESS:
                 history_solar_manager.make_peak_values()
                 solar_history_counter += 1
 
-                if solar_history_counter > 2:
+                if solar_history_counter > 30:
                     solar_history_counter = 0
                     # only every 10 minutes:
                     energy = power_solar_usage.calculate_energy_stats()
                     history_solar_manager.save_to_disk(energy)
-                    # history_solar_manager.uploadHistoryData()
-
+                    history_solar_manager.uploadHistoryData()
+        else:
+            current_solar = 0
     else:
         current_solar = 0
 

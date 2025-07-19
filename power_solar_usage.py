@@ -1,20 +1,54 @@
-from datetime import datetime
+from datetime import datetime, date
 from typing import Dict
+import json
+import os
+from logger import SimpleLogger
+
+BUFFER_FILE = "buffer.json"
 
 
 class PowerSolarUsage:
-    def __init__(self):
+    def __init__(self, logger: SimpleLogger):
+        self.logger = logger
+        self.buffer_file = BUFFER_FILE
         self.daily_buffer = []
+        self.load_buffer()
 
     def store(self, current_solar, current_power):
         self.daily_buffer.append({
-            "timestamp": datetime.now(),
+            "timestamp": datetime.now().isoformat(),
             "solar_w": current_solar,
             "grid_w": current_power
         })
+        self.save_buffer()
+
+    def load_buffer(self):
+        if os.path.exists(self.buffer_file):
+            with open(self.buffer_file, 'r') as f:
+                loaded = json.load(f)
+
+            if loaded:
+                last_timestamp = datetime.fromisoformat(
+                    loaded[-1]['timestamp'])
+                if last_timestamp.date() == date.today():
+                    self.daily_buffer = loaded
+                    self.logger.log(
+                        "Using Buffer file")
+                else:
+                    self.logger.log(
+                        "Buffer is from a previous day. Starting fresh.")
+            else:
+                self.logger.log("Buffer file is empty. Starting fresh.")
+        else:
+            self.logger.log("No buffer file found. Starting fresh.")
+
+    def save_buffer(self):
+        with open(self.buffer_file, 'w') as f:
+            json.dump(self.daily_buffer, f)
 
     def new_day(self):
         self.daily_buffer = []
+        self.save_buffer()
 
     def calculate_energy_stats(self, interval_seconds: int = 10) -> Dict:
         interval_hours = interval_seconds / 3600

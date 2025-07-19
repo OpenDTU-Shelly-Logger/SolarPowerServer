@@ -59,7 +59,7 @@ class HistoryData:
 
     def format_data(self, energy: Dict):
         # OVERALL KWH | TODAY WH | MAXDAY WH | MAXTIME | MAXTEMP |MAXTEMPTIME
-        data = f"{self.overall}|{self.today}|{self.max_value_day}|{self.highest_time}|{self.max_value_temp}|{self.highest_time_temp}|{energy["self_used_wh"]}|{energy["exported_wh"]}|{energy["consumed_wh"]}|{energy["self_consumption_ratio"] | {energy["autarky_ratio"]}}"
+        data = f"{self.overall}|{self.today}|{self.max_value_day}|{self.highest_time}|{self.max_value_temp}|{self.highest_time_temp}|{energy['self_used_wh']}|{energy['exported_wh']}|{energy['consumed_wh']}|{energy['self_consumption_ratio']}|{energy['autarky_ratio']}"
 
         self.logger.log(
             f"{datetime.now().strftime('%d.%m.%Y-%H:%M:%S')} {data}")
@@ -115,14 +115,14 @@ class HistoryData:
     def make_peak_values(self):
         # only when the value is an actual float -> current Power
         if checkDataIsFloat(self.current_power, "Aktueller Ertrag", self.logger):
-            cur_pwr = float(cur_pwr)
+            cur_pwr = float(self.current_power)
             if cur_pwr > self.max_value_day:
                 self.max_value_day = cur_pwr
                 self.highest_time = datetime.now().strftime("%H:%M:%S")
 
         # only when the value is an actual float -> current Temperature
         if checkDataIsFloat(self.current_temp, "Aktuelle Temperatur", self.logger):
-            cur_tmp = float(cur_tmp)
+            cur_tmp = float(self.current_temp)
             if cur_tmp > self.max_value_temp:
                 self.max_value_temp = cur_tmp
                 self.highest_time_temp = datetime.now().strftime("%H:%M:%S")
