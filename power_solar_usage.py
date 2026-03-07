@@ -2,16 +2,18 @@ from datetime import datetime, date
 from typing import Dict
 import json
 import os
+from daily_data_processor import DailyDataProcessor
 from logger import SimpleLogger
 
 BUFFER_FILE = "buffer.json"
 
 
 class PowerSolarUsage:
-    def __init__(self, logger: SimpleLogger):
+    def __init__(self, logger: SimpleLogger, daily_data_processor: DailyDataProcessor):
         self.logger = logger
         self.buffer_file = BUFFER_FILE
         self.daily_buffer = []
+        self.daily_data_processor = daily_data_processor
         self.load_buffer()
 
     def store(self, current_solar, current_power):
@@ -46,7 +48,12 @@ class PowerSolarUsage:
         with open(self.buffer_file, 'w') as f:
             json.dump(self.daily_buffer, f)
 
+    def resample_and_store_data(self):
+        processor = self.daily_data_processor()
+        processor.process_day(self.daily_buffer)
+        
     def new_day(self):
+        self.resample_and_store_data()
         self.daily_buffer = []
         self.save_buffer()
 
