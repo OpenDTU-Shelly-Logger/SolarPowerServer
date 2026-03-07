@@ -61,8 +61,7 @@ class HistoryData:
         # OVERALL KWH | TODAY WH | MAXDAY WH | MAXTIME | MAXTEMP |MAXTEMPTIME
         data = f"{self.overall}|{self.today}|{self.max_value_day}|{self.highest_time}|{self.max_value_temp}|{self.highest_time_temp}|{energy['self_used_wh']}|{energy['exported_wh']}|{energy['consumed_wh']}|{energy['self_consumption_ratio']}|{energy['autarky_ratio']}"
 
-        self.logger.log(
-            f"{datetime.now().strftime('%d.%m.%Y-%H:%M:%S')} {data}")
+        self.logger.log(f"History Data => {self.current_date}|{data}")
         return f"{self.current_date}|{data}"
 
     def uploadHistoryData(self) -> Result:
@@ -128,7 +127,7 @@ class HistoryData:
                 self.highest_time_temp = datetime.now().strftime("%H:%M:%S")
 
     def save_to_disk(self, energy: Dict):
-        currentDate = datetime.now().strftime("%d.%m.%Y")
+        self.current_date = datetime.now().strftime("%d.%m.%Y")
 
         lines = []
         lastline = ""
@@ -139,7 +138,7 @@ class HistoryData:
                 if len(lines) > 0:
                     lastline = lines[len(lines)-1]
 
-            if currentDate in lastline:  # line exists:
+            if self.current_date in lastline:  # line exists:
                 lines[len(lines) - 1] = f"{self.format_data(energy)}\n"
                 with open("solar.txt", "w", encoding="utf-8") as file:
                     file.writelines(lines)
@@ -148,6 +147,5 @@ class HistoryData:
                     file.write(f"{self.format_data(energy)}\n")
 
         except:  # write to file error:
-            actualTime = datetime.now().strftime("%H:%M:%S")
             self.logger.log(
-                f"{actualTime}: Error occured while writing to file")
+                "History Data => Error occured while writing to file")
