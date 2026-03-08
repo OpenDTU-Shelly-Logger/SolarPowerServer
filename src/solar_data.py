@@ -33,7 +33,7 @@ class SolarLiveData:
     def get_live_data(self):
         try:
             res = requests.get(
-                'http://192.168.5.150/api/livedata/status', timeout=2)
+                'http://192.168.10.150/api/livedata/status', timeout=2)
             if res.status_code != 200:
                 self.logger.log("OpenDTU access error " + res.status_code)
             return (Result.SUCCESS if res.status_code == 200 else Result.NO_DATA, res.json())
@@ -56,6 +56,24 @@ class HistoryData:
         self.current_day = datetime.now().strftime("%d")
         self.current_power = ""
         self.current_temp = ""
+
+        if os.path.exists("solar.txt"):
+            try:
+                with open("solar.txt", "r", encoding="utf-8") as f:
+                    lines = f.readlines()
+                    if lines:
+                        last_line = lines[-1].strip()
+                        parts = last_line.split("|")
+                        if len(parts) >= 7 and parts[0] == self.current_date:
+                            self.overall = float(parts[1])
+                            self.today = float(parts[2])
+                            self.max_value_day = float(parts[3])
+                            self.highest_time = parts[4]
+                            self.max_value_temp = float(parts[5])
+                            self.highest_time_temp = parts[6]
+                            self.logger.log(f"Restored daily values: max_day={self.max_value_day}W, time={self.highest_time}, max_temp={self.max_value_temp}C, time={self.highest_time_temp}")
+            except Exception as e:
+                self.logger.log(f"Could not load previous data: {e}")
 
     def format_data(self, energy: Dict):
         # OVERALL KWH | TODAY WH | MAXDAY WH | MAXTIME | MAXTEMP |MAXTEMPTIME

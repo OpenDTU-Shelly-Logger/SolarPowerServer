@@ -3,7 +3,7 @@ import requests
 from logger import SimpleLogger
 from result_enum import Result
 
-SHELLY_PATH = "http://192.168.5.187/status"
+SHELLY_PATH = "http://192.168.10.25/status"
 SERVER_PATH = "https://power.frozenassassine.de/data"
 NO_DATA_WAIT_SECOND = 60
 REQUESTS_EVERY_SECOND = 10
