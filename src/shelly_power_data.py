@@ -1,22 +1,20 @@
-import os
 import requests
 from logger import SimpleLogger
 from result_enum import Result
+from config import Config
 
-SHELLY_PATH = "http://192.168.10.25/status"
-SERVER_PATH = "https://power.frozenassassine.de/data"
-NO_DATA_WAIT_SECOND = 60
-REQUESTS_EVERY_SECOND = 10
 REQUEST_TIMEOUT = 2
 
 
 class ShellyPowerData:
-    def __init__(self, logger: SimpleLogger):
+    def __init__(self, logger: SimpleLogger, config: Config):
         self.logger = logger
+        self.config = config
 
     def get_shelly_data(self):
         try:
-            req = requests.get(SHELLY_PATH, timeout=REQUEST_TIMEOUT)
+            req = requests.get(self.config.SHELLY_API_URL,
+                               timeout=REQUEST_TIMEOUT)
         except:
             self.logger.log("Shelly not reachable")
             return None, Result.NO_DATA
@@ -40,8 +38,11 @@ class ShellyPowerData:
 
     def post_shelly_data(self, filtered_data):
         try:
-            res = requests.post(SERVER_PATH, json=filtered_data,
-                                headers={'Content-Type': 'application/json', 'apikey': os.getenv("PowerLiveAPIKey")}, timeout=REQUEST_TIMEOUT)
+            res = requests.post(self.config.POWER_UPLOAD_URL, json=filtered_data,
+                                headers={'Content-Type': 'application/json',
+                                         'apikey': self.config.UPLOAD_API_KEY},
+                                timeout=REQUEST_TIMEOUT
+                                )
         except:
             self.logger.log("Server not reachable")
             return Result.NO_DATA

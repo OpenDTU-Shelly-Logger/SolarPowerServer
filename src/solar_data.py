@@ -1,9 +1,10 @@
 from datetime import datetime
 from typing import Dict
 import requests
-import os
 from logger import SimpleLogger
 from result_enum import Result
+from database import DatabaseManager
+from config import Config
 
 
 def checkDataIsFloat(data, valueName, logger: SimpleLogger):
@@ -17,13 +18,14 @@ def checkDataIsFloat(data, valueName, logger: SimpleLogger):
 
 
 class SolarLiveData:
-    def __init__(self, logger: SimpleLogger):
+    def __init__(self, logger: SimpleLogger, config: Config):
         self.logger = logger
+        self.config = config
 
     def uploadToServer(self, livedata):
         try:
-            res = requests.post("https://solar.frozenassassine.de/openDTU/livedata", json=livedata,
-                                headers={'Content-Type': 'application/json', 'apikey': os.getenv("WetterLiveAPIKey")}, timeout=2)
+            res = requests.post(self.config.SOLAR_UPLOAD_URL, json=livedata,
+                                headers={'Content-Type': 'application/json', 'apikey': self.config.UPLOAD_API_KEY}, timeout=2)
             if res.status_code == 503:
                 self.logger.log("Solar live data upload => invalid API key")
         except:
@@ -32,8 +34,7 @@ class SolarLiveData:
 
     def get_live_data(self):
         try:
-            res = requests.get(
-                'http://192.168.10.150/api/livedata/status', timeout=2)
+            res = requests.get(self.config.OPENDTU_API_URL, timeout=2)
             if res.status_code != 200:
                 self.logger.log("OpenDTU access error " + res.status_code)
             return (Result.SUCCESS if res.status_code == 200 else Result.NO_DATA, res.json())
@@ -43,7 +44,7 @@ class SolarLiveData:
 
 
 class HistoryData:
-    def __init__(self, logger: SimpleLogger):
+    def __init__(self, logger: SimpleLogger, db_manager: DatabaseManager, config: Config):
         self.logger = logger
         self.max_value_temp = 0
         self.max_value_day = 0
@@ -56,50 +57,46 @@ class HistoryData:
         self.current_day = datetime.now().strftime("%d")
         self.current_power = ""
         self.current_temp = ""
+        self.db = db_manager
+        self.config = config
 
-        if os.path.exists("solar.txt"):
-            try:
-                with open("solar.txt", "r", encoding="utf-8") as f:
-                    lines = f.readlines()
-                    if lines:
-                        last_line = lines[-1].strip()
-                        parts = last_line.split("|")
-                        if len(parts) >= 7 and parts[0] == self.current_date:
-                            self.overall = float(parts[1])
-                            self.today = float(parts[2])
-                            self.max_value_day = float(parts[3])
-                            self.highest_time = parts[4]
-                            self.max_value_temp = float(parts[5])
-                            self.highest_time_temp = parts[6]
-                            self.logger.log(f"Restored daily values: max_day={self.max_value_day}W, time={self.highest_time}, max_temp={self.max_value_temp}C, time={self.highest_time_temp}")
-            except Exception as e:
-                self.logger.log(f"Could not load previous data: {e}")
+        # Try to restore today's values from DB
+        try:
+            # Convert DD.MM.YYYY to YYYY-MM-DD
+            parts = self.current_date.split('.')
+            date_iso = f"{parts[2]}-{parts[1]}-{parts[0]}"
 
-    def format_data(self, energy: Dict):
-        # OVERALL KWH | TODAY WH | MAXDAY WH | MAXTIME | MAXTEMP |MAXTEMPTIME
-        data = f"{self.overall}|{self.today}|{self.max_value_day}|{self.highest_time}|{self.max_value_temp}|{self.highest_time_temp}|{energy['self_used_wh']}|{energy['exported_wh']}|{energy['consumed_wh']}|{energy['self_consumption_ratio']}|{energy['autarky_ratio']}"
-
-        self.logger.log(f"History Data => {self.current_date}|{data}")
-        return f"{self.current_date}|{data}"
+            row = self.db.get_daily_record(date_iso)
+            if row:
+                self.overall = row['total_solar_kwh']
+                self.today = row['daily_solar_wh']
+                self.max_value_day = row['peak_solar_watt']
+                self.highest_time = row['peak_time']
+                self.max_value_temp = row['peak_temp_inverter']
+                self.highest_time_temp = row['peak_temp_time']
+                self.logger.log(
+                    f"Restored daily values: max_day={self.max_value_day}W, time={self.highest_time}, max_temp={self.max_value_temp}C, time={self.highest_time_temp}")
+        except Exception as e:
+            self.logger.log(f"Could not load previous data: {e}")
 
     def uploadHistoryData(self) -> Result:
-        with open("solar.txt", encoding="utf-8") as f:
-            lines = f.readlines()
-            historyData = "\n".join([line for line in lines if line.strip()])
-
-        if len(historyData) == 0:
-            return
-
         try:
-            res = requests.post("https://solar.frozenassassine.de/openDTU/alldata", data=historyData,
-                                headers={'Content-Type': 'application/json', 'apikey': os.getenv("WetterLiveAPIKey")}, timeout=2)
+            with open(self.db.db_path, "rb") as f:
+                res = requests.post(self.config.SYNC_DB_URL, files={'file': f},
+                                    headers={'apikey': self.config.UPLOAD_API_KEY}, timeout=10)
+
             if res.status_code == 503:
                 self.logger.log("History Data => Invalid API Key")
                 return Result.FAILED
             elif res.status_code == 200:
+                self.logger.log("History Data => Database synced successfully")
                 return Result.SUCCESS
-        except:
-            self.logger.log("Could not upload live data")
+            else:
+                self.logger.log(
+                    f"History Data => Upload failed {res.status_code}")
+                return Result.FAILED
+        except Exception as e:
+            self.logger.log(f"Could not upload database: {e}")
             return Result.FAILED
 
     def check_next_day(self) -> bool:
@@ -147,23 +144,34 @@ class HistoryData:
     def save_to_disk(self, energy: Dict):
         self.current_date = datetime.now().strftime("%d.%m.%Y")
 
-        lines = []
-        lastline = ""
+        # Save to DB
         try:
-            # check for existing entry:
-            with open("solar.txt", "r", encoding="utf-8") as file:
-                lines = file.readlines()
-                if len(lines) > 0:
-                    lastline = lines[len(lines)-1]
+            # Convert DD.MM.YYYY to YYYY-MM-DD
+            parts = self.current_date.split('.')
+            date_iso = f"{parts[2]}-{parts[1]}-{parts[0]}"
 
-            if self.current_date in lastline:  # line exists:
-                lines[len(lines) - 1] = f"{self.format_data(energy)}\n"
-                with open("solar.txt", "w", encoding="utf-8") as file:
-                    file.writelines(lines)
-            else:
-                with open("solar.txt", "a", encoding="utf-8") as file:
-                    file.write(f"{self.format_data(energy)}\n")
+            # Save solar part
+            self.db.save_daily_solar(
+                date_iso,
+                self.overall,
+                self.today,
+                self.max_value_day,
+                self.highest_time,
+                self.max_value_temp,
+                self.highest_time_temp
+            )
 
-        except:  # write to file error:
-            self.logger.log(
-                "History Data => Error occured while writing to file")
+            # Save power part
+            self.db.save_daily_power(
+                date_iso,
+                energy['self_used_wh'],
+                energy['exported_wh'],
+                energy['consumed_wh'],
+                energy['self_consumption_ratio'],
+                energy['autarky_ratio']
+            )
+
+            self.logger.log(f"Saved daily data to DB: {self.current_date}")
+
+        except Exception as e:
+            self.logger.log(f"History Data => Error writing to DB: {e}")

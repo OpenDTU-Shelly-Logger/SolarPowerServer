@@ -4,14 +4,13 @@ import json
 import os
 from daily_data_processor import DailyDataProcessor
 from logger import SimpleLogger
-
-BUFFER_FILE = "buffer.json"
+from config import Config
 
 
 class PowerSolarUsage:
-    def __init__(self, logger: SimpleLogger, daily_data_processor: DailyDataProcessor):
+    def __init__(self, logger: SimpleLogger, daily_data_processor: DailyDataProcessor, config: Config):
         self.logger = logger
-        self.buffer_file = BUFFER_FILE
+        self.buffer_file = config.BUFFER_FILE_PATH
         self.daily_buffer = []
         self.daily_data_processor = daily_data_processor
         self.load_buffer()
@@ -51,7 +50,7 @@ class PowerSolarUsage:
     def resample_and_store_data(self):
         processor = self.daily_data_processor()
         processor.process_day(self.daily_buffer)
-        
+
     def new_day(self):
         self.resample_and_store_data()
         self.daily_buffer = []

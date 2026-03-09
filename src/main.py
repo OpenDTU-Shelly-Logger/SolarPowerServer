@@ -6,13 +6,17 @@ from result_enum import Result
 from shelly_power_data import ShellyPowerData
 from solar_data import SolarLiveData, HistoryData
 from daily_data_processor import DailyDataProcessor
+from config import Config
+from database import DatabaseManager
 
-logger = SimpleLogger()
-daily_data_processor = DailyDataProcessor()
-live_solar_uploader = SolarLiveData(logger)
-power_data = ShellyPowerData(logger)
-history_solar_manager = HistoryData(logger)
-power_solar_usage = PowerSolarUsage(logger, daily_data_processor)
+config = Config()
+logger = SimpleLogger(config.LOG_FILE)
+dbManager = DatabaseManager(config.DATABASE_PATH)
+daily_data_processor = DailyDataProcessor(config)
+live_solar_uploader = SolarLiveData(logger, config)
+power_data = ShellyPowerData(logger, config)
+history_solar_manager = HistoryData(logger, dbManager, config)
+power_solar_usage = PowerSolarUsage(logger, daily_data_processor, config)
 
 current_solar = 0
 current_power = 0
@@ -53,6 +57,5 @@ while True:
         current_solar = 0
 
     power_solar_usage.store(current_solar, current_power)
-    power_solar_usage.resample_and_store_data()
 
     time.sleep(10)
