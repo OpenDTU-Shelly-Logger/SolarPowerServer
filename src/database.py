@@ -1,8 +1,6 @@
 
 import sqlite3
 import os
-import json
-from datetime import datetime
 
 
 class DatabaseManager:
@@ -15,7 +13,14 @@ class DatabaseManager:
         conn.row_factory = sqlite3.Row
         return conn
 
+    def make_data_folder_structure(self):
+        folder = os.path.dirname(self.db_path)
+        if folder:
+            os.makedirs(folder, exist_ok=True)
+
     def _init_db(self):
+        self.make_data_folder_structure()
+
         conn = self._get_connection()
         cursor = conn.cursor()
 

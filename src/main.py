@@ -20,7 +20,7 @@ power_solar_usage = PowerSolarUsage(logger, daily_data_processor, config)
 
 current_solar = 0
 current_power = 0
-solar_history_counter = 0
+solar_history_counter = 30  # for a very first sync on start
 
 while True:
     currenthour = int(datetime.now().strftime("%H"))
