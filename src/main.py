@@ -35,7 +35,7 @@ while True:
         power_solar_usage.new_day()
 
     # send solar only at day
-    if currenthour <= 22 and currenthour >= 5:
+    if config.UPLOAD_24_7 or currenthour <= 23 and currenthour >= 5:
         live_solar_result, live_solar_data = live_solar_uploader.get_live_data()
         if live_solar_result == Result.SUCCESS:
             live_solar_uploader.uploadToServer(live_solar_data)
@@ -47,7 +47,7 @@ while True:
 
                 if solar_history_counter > 30:
                     solar_history_counter = 0
-                    # only every 10 minutes:
+                    # only every 5 minutes:
                     energy = power_solar_usage.calculate_energy_stats()
                     history_solar_manager.save_to_disk(energy)
                     history_solar_manager.uploadHistoryData()

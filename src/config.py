@@ -13,9 +13,10 @@ class Config:
         self.DATABASE_PATH = os.getenv("DATABASE_PATH")
         self.BUFFER_FILE_PATH = os.getenv("BUFFER_FILE_PATH")
         self.LOG_FILE = os.getenv("LOG_FILE")
+        self.UPLOAD_24_7 = bool(os.getenv("UPLOAD_24_7"))
 
         self.SYNC_DB_URL = f"http://{self.DOMAIN}/api/data/syncdb"
-        self.OPENDTU_API_URL = f"http://{self.OPENDTU_IP}/api/livedata/status"
         self.SOLAR_UPLOAD_URL = f"http://{self.DOMAIN}/api/data/solar"
         self.POWER_UPLOAD_URL = f"http://{self.DOMAIN}/api/data/power"
+        self.OPENDTU_API_URL = f"http://{self.OPENDTU_IP}/api/livedata/status"
         self.SHELLY_API_URL = f"http://{self.SHELLY_IP}/status"

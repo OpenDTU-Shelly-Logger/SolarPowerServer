@@ -11,9 +11,6 @@ class DailyDataProcessor:
         self.solar_threshold = 150
 
     def process_day(self, raw_data):
-        """
-        Verarbeitet die Rohdaten eines Tages und speichert sie in der DB.
-        """
         if not raw_data:
             return
 

@@ -51,6 +51,7 @@ The project is configured via a `.env` file. A sample is provided as `.env.examp
 | `DATABASE_PATH`    | Path to the local SQLite database (default: `./data/solar_data.db`).      |
 | `BUFFER_FILE_PATH` | Path for temporary data buffering (default: `./data/buffer.json`).        |
 | `LOG_FILE`         | Path where logs are written (default: `./data/output.log`).               |
+| `UPLOAD_24_7`      | Upload the data all the time or only between 23:59 and 5:00               |
 
 ## 🚀 Installation & Setup
 
