@@ -12,7 +12,7 @@ from database import DatabaseManager
 config = Config()
 logger = SimpleLogger(config.LOG_FILE)
 dbManager = DatabaseManager(config.DATABASE_PATH)
-daily_data_processor = DailyDataProcessor(config)
+daily_data_processor = DailyDataProcessor(dbManager)
 live_solar_uploader = SolarLiveData(logger, config)
 power_data = ShellyPowerData(logger, config)
 history_solar_manager = HistoryData(logger, dbManager, config)

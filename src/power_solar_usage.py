@@ -48,8 +48,7 @@ class PowerSolarUsage:
             json.dump(self.daily_buffer, f)
 
     def resample_and_store_data(self):
-        processor = self.daily_data_processor()
-        processor.process_day(self.daily_buffer)
+        self.daily_data_processor.process_day(self.daily_buffer)
 
     def new_day(self):
         self.resample_and_store_data()
